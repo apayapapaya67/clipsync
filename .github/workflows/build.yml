@@ -1,0 +1,50 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ekstrak proyek dari ZIP
+        run: |
+          rm -rf proj
+          mkdir proj
+          unzip -q -o clipsync-project.zip -d proj
+          ls -la proj
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK
+        working-directory: proj
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Ganti nama APK
+        run: cp proj/app/build/outputs/apk/debug/app-debug.apk ClipSync.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipSync-apk
+          path: ClipSync.apk
+
+      - name: Buat Release (APK bisa diunduh langsung)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: ClipSync build ${{ github.run_number }}
+          files: ClipSync.apk
